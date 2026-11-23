@@ -20,6 +20,35 @@ function toggleTheme(){
 
 const STORE_KEY = 'lacta_predict_cows_v1';
 let cows = [];
+let storeKey = null; // diisi saat login: data ternak dipisah per akun (uid)
+
+// Jembatan ke auth.js: dipanggil saat status login berubah.
+const App = {
+  user: null,
+  onSignedIn(user){
+    const changed = !this.user || this.user.uid !== user.uid;
+    this.user = user;
+    document.getElementById('greetText').textContent = greetText(user);
+    if(changed){
+      storeKey = STORE_KEY + '_' + user.uid;
+      loadCows();
+      updateBreedOptions();
+      renderCow();
+    }
+  },
+  onSignedOut(){
+    this.user = null; storeKey = null; cows = [];
+  }
+};
+function greetText(user){
+  const h = new Date().getHours();
+  const sapa = h<11 ? 'Selamat pagi' : h<15 ? 'Selamat siang' : h<18 ? 'Selamat sore' : 'Selamat malam';
+  const nama = (user.displayName || (user.email||'').split('@')[0] || '').trim();
+  return nama ? sapa + ', ' + nama : sapa;
+}
+function escapeHtml(v){
+  return String(v==null?'':v).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
 
 function defaultCows(){
   return [
@@ -31,14 +60,18 @@ function defaultCows(){
 function cuid(){ return Math.random().toString(36).slice(2,9); }
 
 function loadCows(){
+  // Akun baru (belum ada data tersimpan) diberi 3 sapi contoh. Setelah itu daftar boleh kosong.
+  let raw = null;
+  try{ raw = storeKey ? localStorage.getItem(storeKey) : null; }catch(e){}
+  if(raw === null){ cows = defaultCows(); saveCows(); return; }
   try{
-    const raw = localStorage.getItem(STORE_KEY);
-    cows = raw ? JSON.parse(raw) : defaultCows();
-  }catch(e){ cows = defaultCows(); }
-  if(!cows || !cows.length) cows = defaultCows();
+    const parsed = JSON.parse(raw);
+    cows = Array.isArray(parsed) ? parsed.filter(c=>c && typeof c==='object' && c.id && c.nama) : [];
+  }catch(e){ cows = []; }
 }
 function saveCows(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(cows)); }catch(e){}
+  if(!storeKey) return;
+  try{ localStorage.setItem(storeKey, JSON.stringify(cows)); }catch(e){}
 }
 
 // --- rumus perkiraan sederhana (bukan model ML asli, hanya untuk demo alur) ---
@@ -58,7 +91,12 @@ function predict(cow){
 }
 function fmt1(n){ return n.toFixed(1).replace('.', ','); }
 
+const PUBLIC_SCREENS = ['s-loading','s-login','s-verify'];
 function go(id){
+  if(!App.user && PUBLIC_SCREENS.indexOf(id)===-1){ // layar aplikasi hanya untuk akun terverifikasi
+    const pending = window.firebase && firebase.apps.length && firebase.auth().currentUser; // sudah login tapi belum verifikasi
+    id = pending ? 's-verify' : 's-login';
+  }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   const ph = document.getElementById(id).closest('.phone');
@@ -69,16 +107,53 @@ function go(id){
 
 function fillSelect(){
   const sel = document.getElementById('cowSelect');
-  const dairy = cows.map((c,i)=>({c,i})).filter(x=>(x.c.kategori||'perah')==='perah');
-  sel.innerHTML = dairy.map(x=>`<option value="${x.i}">${x.c.nama} · ${x.c.kandang}</option>`).join('');
+  const keep = sel.value; // pertahankan pilihan saat daftar dibangun ulang
+  const dairy = cows.filter(c=>(c.kategori||'perah')==='perah');
+  sel.innerHTML = dairy.map(c=>`<option value="${escapeHtml(c.id)}">${escapeHtml(c.nama)} · ${escapeHtml(c.kandang)}</option>`).join('');
   if(!dairy.length) sel.innerHTML = '<option value="">Belum ada sapi perah</option>';
+  else if(dairy.some(c=>c.id===keep)) sel.value = keep;
 }
 
 function renderCow(){
   fillSelect();
   const sel = document.getElementById('cowSelect');
-  const i = Number(sel.value);
-  if(Number.isInteger(i) && cows[i]) showPrediction(cows[i]);
+  const cow = cows.find(c=>c.id===sel.value && (c.kategori||'perah')==='perah');
+  if(cow) showPrediction(cow); else clearPrediction();
+}
+
+function clearPrediction(){
+  document.getElementById('predBesok').textContent = '-';
+  document.getElementById('predDelta').textContent = '-';
+  document.getElementById('alertBox').className = 'alert-box ok';
+  document.getElementById('alertIcon').textContent = '🐄';
+  document.getElementById('alertTitle').textContent = 'Belum ada data sapi perah';
+  document.getElementById('alertSub').textContent = 'Tambahkan sapi perah di menu Data Ternak untuk melihat prediksi.';
+  document.getElementById('cowMeta').textContent = 'Belum ada sapi perah dipilih';
+  document.getElementById('detailBesok').textContent = '-';
+  const badge = document.getElementById('detailBadge');
+  badge.textContent = '-'; badge.style.background = 'rgba(255,255,255,.18)';
+  ['Prev','Pakan','Suhu'].forEach(k=>{
+    document.getElementById('bar'+k+'Val').textContent = '-';
+    document.getElementById('bar'+k).style.width = '0%';
+  });
+  document.getElementById('segVal').textContent = '-';
+  drawTrend(null);
+}
+
+// Grafik tren: kemarin (data aktual) lalu proyeksi 3 hari memakai rumus predict() yang sama,
+// dengan pakan & suhu dianggap tetap.
+function drawTrend(cow){
+  const solid = document.getElementById('trendSolid');
+  const dash = document.getElementById('trendDash');
+  if(!cow){ solid.setAttribute('points',''); dash.setAttribute('points',''); return; }
+  const v = [cow.prev];
+  let cur = {...cow};
+  for(let k=0;k<3;k++){ const p = predict(cur).pred; v.push(p); cur = {...cur, prev:p}; }
+  const min = Math.min(...v), max = Math.max(...v), span = (max-min) || 1;
+  const pts = v.map((val,idx)=>[4 + idx*(292/3), max===min ? 35 : 60 - ((val-min)/span)*50]);
+  const str = a=>a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  solid.setAttribute('points', str(pts.slice(0,2)));
+  dash.setAttribute('points', str(pts.slice(1)));
 }
 
 function showPrediction(cow){
@@ -106,24 +181,41 @@ function showPrediction(cow){
   document.getElementById('barSuhuVal').textContent = r.fSuhu+'%';
   document.getElementById('barSuhu').style.width = r.fSuhu+'%';
   document.getElementById('segVal').textContent = r.segmen;
+  drawTrend(cow);
+  if(window.LactaSync) LactaSync.overlay(cow); // hasil model dari Supabase (jika ada) menimpa rumus lokal
 }
 
 function renderList(){
   const wrap = document.getElementById('cowList');
+  if(!cows.length){
+    wrap.innerHTML = `<div class="hint" style="margin-top:6px">Belum ada sapi tercatat. Tap "+ Tambah Sapi" di atas untuk mulai mencatat.</div>`;
+    return;
+  }
   wrap.innerHTML = cows.map((c,i)=>{
     const beef=(c.kategori||'perah')==='potong';
     const r = beef?null:predict(c);
     const warn = beef?false:r.dropPct>=10;
     return `<div class="cow-item" onclick="selectCow(${i})">
-      <div><div class="ci-name">${c.nama}</div><div class="ci-sub">${c.ras} · ${c.kandang} · ${beef?'Sapi potong':'Sapi perah'}</div></div>
+      <div style="flex:1;min-width:0"><div class="ci-name">${escapeHtml(c.nama)}</div><div class="ci-sub">${escapeHtml(c.ras)} · ${escapeHtml(c.kandang)} · ${beef?'Sapi potong':'Sapi perah'}</div></div>
       <div class="ci-badge ${beef?'badge-good':(warn?'badge-warn':'badge-good')}">${beef?'Inventaris':(warn?'Perlu cek':'Baik')}</div>
+      <button type="button" class="ci-del" aria-label="Hapus ${escapeHtml(c.nama)}" onclick="event.stopPropagation();deleteCow(${i})">Hapus</button>
     </div>`;
   }).join('') + `<div class="hint" style="margin-top:6px">Tap salah satu sapi untuk lihat prediksinya, atau "+ Tambah Sapi" di atas untuk mencatat sapi baru.</div>`;
 }
 
+function deleteCow(i){
+  const c = cows[i]; if(!c) return;
+  if(!window.confirm('Hapus "'+c.nama+'" dari daftar ternak? Data tidak bisa dikembalikan.')) return;
+  cows.splice(i,1);
+  saveCows();
+  renderList();
+  renderCow();
+}
+
 function selectCow(i){
+  if(!cows[i]) return;
   if((cows[i].kategori||'perah')==='potong'){ alert('Sapi potong tersimpan di inventaris, tetapi tidak dimasukkan ke prediksi produksi susu.'); return; }
-  document.getElementById('cowSelect').value = i;
+  document.getElementById('cowSelect').value = cows[i].id;
   renderCow();
   go('s-detail');
 }
@@ -159,24 +251,28 @@ function submitForm(){
     alert('Isi nama sapi serta data produksi, pakan, dan suhu untuk sapi perah.');
     return;
   }
+  if(kategori==='perah' && !(prev>0 && prev<=100 && pakan>0 && pakan<=100 && suhu>=10 && suhu<=50)){
+    alert('Periksa angka: produksi dan pakan harus lebih dari 0 (maks. 100), suhu kandang antara 10-50 °C.');
+    return;
+  }
   const cow = {id:cuid(), nama, kategori, ras, kandang, prev, pakan, suhu};
   cows.push(cow);
   saveCows();
   fillSelect();
   if(kategori==='perah'){
-    document.getElementById('cowSelect').value = cows.length-1;
+    document.getElementById('cowSelect').value = cow.id;
     showPrediction(cow);
     go('s-detail');
+    if(window.LactaSync) LactaSync.syncAfterSave(cow); // simpan ke Supabase -> backend AI -> tampilkan hasil
   } else {
     alert('Data sapi potong berhasil ditambahkan ke inventaris. Sapi ini tidak masuk ke prediksi produksi susu.');
     go('s-ternak');
   }
 }
 
-loadCows();
+// Data ternak baru dimuat setelah login (lihat App.onSignedIn di atas dan js/auth.js).
 applyTheme(document.documentElement.getAttribute('data-theme') || 'light');
 updateBreedOptions();
-renderCow();
 
 // Daftarkan service worker (offline + bisa di-install)
 if('serviceWorker' in navigator && location.protocol!=='file:'){

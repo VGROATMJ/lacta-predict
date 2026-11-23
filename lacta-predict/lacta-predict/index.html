@@ -18,27 +18,70 @@
 <div class="phone">
   <button class="theme-toggle" id="themeToggle" type="button" onclick="toggleTheme()" aria-label="Ganti tema tampilan"><span id="themeIcon">☀️</span><span id="themeLabel">Mode Terang</span></button>
 
-  <!-- LAYAR LOGIN -->
-  <div class="screen active" id="s-login">
+  <!-- LAYAR MEMUAT (cek sesi login) -->
+  <div class="screen active" id="s-loading">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+      <div class="logo-circle">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M4 15c3-5 13-5 16 0"/></svg>
+      </div>
+      <h1 class="brand">Lacta-Predict</h1>
+      <div class="sub">Memeriksa sesi...</div>
+    </div>
+  </div>
+
+  <!-- LAYAR LOGIN / DAFTAR / LUPA SANDI (Firebase Auth) -->
+  <div class="screen" id="s-login">
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
       <div class="logo-circle">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M4 15c3-5 13-5 16 0"/></svg>
       </div>
       <h1 class="brand">Lacta-Predict</h1>
       <div class="sub">Prediksi produksi susu sapi perah</div>
-      <label>Email / No. HP</label>
-      <input id="loginUser" placeholder="Masukkan email atau nomor HP" value="budi@peternak.id">
-      <label>Kata Sandi</label>
-      <input type="password" placeholder="Masukkan kata sandi" value="••••••••">
-      <button class="btn btn-primary" onclick="go('s-dash')">Masuk</button>
-      <div class="link-row">Belum punya akun? <b>Daftar</b></div>
+      <h2 class="title" id="loginHeading" hidden style="text-align:center;font-size:16px"></h2>
+      <form id="authForm" novalidate>
+        <div id="nameGroup" hidden>
+          <label for="authName">Nama</label>
+          <input id="authName" autocomplete="name" placeholder="Nama lengkap" maxlength="60">
+        </div>
+        <label for="loginUser">Email</label>
+        <input id="loginUser" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="Masukkan email">
+        <div id="passGroup">
+          <label for="authPass">Kata Sandi</label>
+          <input id="authPass" type="password" autocomplete="current-password" placeholder="Masukkan kata sandi">
+        </div>
+        <div id="confirmGroup" hidden>
+          <label for="authPass2">Ulangi Kata Sandi</label>
+          <input id="authPass2" type="password" autocomplete="new-password" placeholder="Ulangi kata sandi">
+        </div>
+        <div class="hint" id="passHint" hidden>Minimal 8 karakter, kombinasi huruf dan angka. Setelah daftar, Anda wajib memverifikasi email.</div>
+        <div class="msg" id="authMsg" role="alert" hidden></div>
+        <button class="btn btn-primary" id="authSubmit" type="submit">Masuk</button>
+      </form>
+      <div class="link-row" id="forgotRow"><button type="button" class="linkbtn" id="forgotLink">Lupa kata sandi?</button></div>
+      <div class="link-row"><span id="toggleText">Belum punya akun? </span><button type="button" class="linkbtn" id="toggleLink">Daftar</button></div>
       <div class="consent"><b>PERSETUJUAN DATA</b>Data ternak kalian dipakai hanya untuk memprediksi dan memantau produksi susu.</div>
+    </div>
+  </div>
+
+  <!-- LAYAR VERIFIKASI EMAIL -->
+  <div class="screen" id="s-verify">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+      <div class="logo-circle">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M4 15c3-5 13-5 16 0"/></svg>
+      </div>
+      <h1 class="brand">Verifikasi Email</h1>
+      <div class="sub">Kami mengirim tautan verifikasi ke<br><b id="verifyEmail">-</b></div>
+      <div class="consent" style="margin-top:0">Buka email Anda (cek juga folder spam), klik tautan verifikasi, lalu kembali ke sini dan tekan tombol di bawah.</div>
+      <div class="msg" id="verifyMsg" role="alert" hidden></div>
+      <button class="btn btn-primary" id="checkBtn" type="button">Saya Sudah Verifikasi</button>
+      <button class="btn btn-outline" id="resendBtn" type="button">Kirim Ulang Email Verifikasi</button>
+      <div class="link-row"><button type="button" class="linkbtn" id="verifyLogout">Pakai akun lain / Keluar</button></div>
     </div>
   </div>
 
   <!-- LAYAR DASHBOARD -->
   <div class="screen" id="s-dash">
-    <div class="greet">Selamat pagi, Pak Budi</div>
+    <div class="greet" id="greetText">Selamat datang</div>
     <h2 class="title">Prediksi Produksi</h2>
     <div class="desc">Perkiraan 1 hari ke depan</div>
 
@@ -55,10 +98,10 @@
     <div class="card">
       <h3 class="section-h">Tren &amp; Prediksi</h3>
       <svg class="chart" viewBox="0 0 300 70">
-        <polyline points="0,46 50,38 100,44 150,30 200,34 250,18 300,22" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <polyline points="200,34 250,18 300,22" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="4 4" stroke-linecap="round"/>
+        <polyline id="trendSolid" points="0,46 50,38 100,44 150,30 200,34 250,18 300,22" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline id="trendDash" points="200,34 250,18 300,22" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="4 4" stroke-linecap="round"/>
       </svg>
-      <div class="chart-axis"><span>Hari ini</span><span>+3 hari</span></div>
+      <div class="chart-axis"><span>Kemarin</span><span>+3 hari</span></div>
     </div>
 
     <div class="alert-box" id="alertBox">
@@ -72,7 +115,7 @@
       <div class="ni on" onclick="go('s-dash')">Beranda</div>
       <div class="ni" onclick="go('s-ternak')">Data Ternak</div>
       <div class="ni" onclick="go('s-detail')">Prediksi</div>
-      <div class="ni">Akun</div>
+      <div class="ni" onclick="go('s-akun')">Akun</div>
     </div>
   </div>
 
@@ -151,12 +194,43 @@
       <div class="ni" onclick="go('s-dash')">Beranda</div>
       <div class="ni" onclick="go('s-ternak')">Data Ternak</div>
       <div class="ni on">Prediksi</div>
-      <div class="ni">Akun</div>
+      <div class="ni" onclick="go('s-akun')">Akun</div>
+    </div>
+  </div>
+
+  <!-- LAYAR AKUN -->
+  <div class="screen" id="s-akun">
+    <div class="topbar"><span class="back" onclick="go('s-dash')">‹ Kembali</span></div>
+    <h2 class="title">Akun</h2>
+    <div class="desc">Informasi akun dan keamanan</div>
+
+    <div class="segment-box" style="margin-top:0">
+      <div class="k">Nama</div><div class="v" id="akunNama" style="font-size:15px;margin-bottom:10px">-</div>
+      <div class="k">Email</div><div class="v" id="akunEmail" style="font-size:15px;margin-bottom:10px;word-break:break-all">-</div>
+      <div class="k">Status</div><div class="v" id="akunStatus" style="font-size:15px">-</div>
+    </div>
+
+    <div class="msg" id="akunMsg" role="alert" hidden></div>
+    <button class="btn btn-outline" id="akunReset" type="button">Ganti Kata Sandi (kirim tautan ke email)</button>
+    <button class="btn btn-primary" id="akunLogout" type="button">Keluar</button>
+    <div class="footnote">Data ternak disimpan di perangkat ini dan dipisah per akun.</div>
+
+    <div class="navbar">
+      <div class="ni" onclick="go('s-dash')">Beranda</div>
+      <div class="ni" onclick="go('s-ternak')">Data Ternak</div>
+      <div class="ni" onclick="go('s-detail')">Prediksi</div>
+      <div class="ni on">Akun</div>
     </div>
   </div>
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/supabase-config.js"></script>
 <script src="js/app.js"></script>
+<script src="js/supabase-sync.js"></script>
+<script src="js/auth.js"></script>
 </body>
 </html>
