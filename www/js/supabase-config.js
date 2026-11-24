@@ -8,7 +8,7 @@
 window.LACTA_SUPABASE = {
   url: 'https://plswweswcbclgnuoomgq.supabase.co',
   anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsc3d3ZXN3Y2JjbGdudW9vbWdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5NzcwNjksImV4cCI6MjExMDU1MzA2OX0._e4xwE1K9VbPp1f1WSueQobENid21UIQmCckdGkpBjU',
-  apiBase: 'https://studied-frames-picture-shot.trycloudflare.com',
+  apiBase: 'https://fisheries-guides-scout-stop.trycloudflare.com',
   // Harus SAMA dengan FARMER_NAMESPACE di lacta-predict-backend/common.py
   farmerNamespace: 'a3f1c2de-5b6a-4c1e-9d8f-1a2b3c4d5e6f',
   // Nilai bawaan bila sapi dibuat tanpa atribut (jarang terjadi; form sudah memintanya).
