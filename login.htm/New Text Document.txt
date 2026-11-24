@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lacta-Predict - Login & Register</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 300px; }
+    h2 { text-align: center; color: #333; }
+    input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+    button { width: 100%; padding: 10px; background: #ff7043; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+    button:hover { background: #f4511e; }
+    .switch { text-align: center; margin-top: 15px; font-size: 14px; color: #666; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2 id="form-title">Login Lacta-Predict</h2>
+    
+    <input type="email" id="email" placeholder="Email Anda">
+    <input type="password" id="password" placeholder="Password">
+    
+    <button id="submit-btn" onclick="handleAuth()">Masuk</button>
+    
+    <div class="switch" id="switch-text" onclick="toggleMode()">Belum punya akun? Daftar di sini</div>
+  </div>
+
+  <!-- Firebase SDK (Compat Version) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+  <script>
+    // KONFIGURASI FIREBASE ANDA
+    const firebaseConfig = {
+      apiKey: "AIzaSyCNZc2qhLzUoymtGoLeIa7C_t9l7bm9iYI",
+      authDomain: "lacta-predict.firebaseapp.com",
+      projectId: "lacta-predict",
+      storageBucket: "lacta-predict.firebasestorage.app",
+      messagingSenderId: "1277587941",
+      appId: "1:1277587941:web:3fcaf8f1e1200e0e49bf0c",
+      measurementId: "G-MPEXE6NP5K"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    let isRegisterMode = false;
+
+    function toggleMode() {
+      isRegisterMode = !isRegisterMode;
+      const title = document.getElementById("form-title");
+      const btn = document.getElementById("submit-btn");
+      const switchText = document.getElementById("switch-text");
+
+      if (isRegisterMode) {
+        title.innerText = "Daftar Akun Baru";
+        btn.innerText = "Daftar";
+        switchText.innerText = "Sudah punya akun? Login di sini";
+      } else {
+        title.innerText = "Login Lacta-Predict";
+        btn.innerText = "Masuk";
+        switchText.innerText = "Belum punya akun? Daftar di sini";
+      }
+    }
+
+    function handleAuth() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        alert("Email dan password tidak boleh kosong!");
+        return;
+      }
+
+      if (isRegisterMode) {
+        // Pendaftaran Akun + Kirim Email Verifikasi
+        auth.createUserWithEmailAndPassword(email, password)
+          .then((userCredential) => {
+            userCredential.user.sendEmailVerification().then(() => {
+              alert("Pendaftaran berhasil! Link verifikasi telah dikirim ke email Anda. Silakan cek inbox/spam.");
+              auth.signOut();
+              toggleMode();
+            });
+          })
+          .catch((error) => {
+            alert("Gagal daftar: " + error.message);
+          });
+      } else {
+        // Proses Login & Cek Verifikasi Email
+        auth.signInWithEmailAndPassword(email, password)
+          .then((userCredential) => {
+            const user = userCredential.user;
+            
+            if (user.emailVerified) {
+              alert("Login Berhasil! Selamat datang di Lacta-Predict.");
+              // Arahkan ke halaman utama aplikasi Anda (index.html lama)
+              window.location.href = "index.html";
+            } else {
+              alert("Akun Anda belum diverifikasi! Silakan cek email Anda dan klik link verifikasinya terlebih dahulu.");
+              auth.signOut();
+            }
+          })
+          .catch((error) => {
+            alert("Login gagal: " + error.message);
+          });
+      }
+    }
+  </script>
+</body>
+</html>

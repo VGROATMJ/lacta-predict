@@ -1,0 +1,17 @@
+{
+  "appId": "id.lactapredict.app",
+  "appName": "Lacta-Predict",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "always",
+    "limitsNavigationsToAppBoundDomains": false
+  }
+}

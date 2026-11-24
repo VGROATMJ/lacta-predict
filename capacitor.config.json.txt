@@ -1,0 +1,10 @@
+{
+  "appId": "com.lactapredict.app",
+  "appName": "Lacta-Predict",
+  "webDir": "www",
+  "plugins": {
+    "Asset": {
+      "icon": "assets/icon.png"
+    }
+  }
+}

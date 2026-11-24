@@ -1,0 +1,101 @@
+{
+  "trained_at": "2026-11-23T16:22:26+00:00",
+  "dataset": "lacta_predict_dataset_clean_v2.csv",
+  "n_rows": 2250,
+  "split_source": "kolom 'split' dataset",
+  "model_kind": "gradient_boosting",
+  "cv_mape": {
+    "linear": 11.888983074832058,
+    "random_forest": 11.280112396333129,
+    "gradient_boosting": 11.209699669982731
+  },
+  "alert_threshold": 0.1,
+  "drop_threshold": 0.1,
+  "mape_floor_l": 1.0,
+  "feature_columns": [
+    "prev_milk_yield_l",
+    "dmi_kg",
+    "usia_bulan",
+    "suhu_c",
+    "kelembapan_pct",
+    "thi_score",
+    "feed_efficiency_prev",
+    "genetic_group",
+    "tahap_laktasi"
+  ],
+  "test": {
+    "H+1": {
+      "mape": 9.978459191184278,
+      "mae": 0.4514262470152806,
+      "rmse": 0.5732617627181175,
+      "r2": 0.9521234733634307
+    },
+    "naive": {
+      "mape": 12.93369601169422,
+      "mae": 0.5767111111111112,
+      "rmse": 0.7450777737182132,
+      "r2": 0.9191239555127761
+    },
+    "recursive_mean_l": {
+      "H+1": 5.296590992786244,
+      "H+2": 5.307240312820813,
+      "H+3": 5.307311180965365
+    },
+    "horizon_note": "H+2 dan H+3 adalah proyeksi rekursif; dataset tidak memuat ground truth multi-hari.",
+    "recall_peringatan_dini": 0.3515625,
+    "precision_peringatan_dini": 0.703125,
+    "alert_tradeoff": [
+      {
+        "threshold": 0.05,
+        "recall": 0.546875,
+        "precision": 0.5303030303030303,
+        "alert_rate": 0.29333333333333333
+      },
+      {
+        "threshold": 0.08,
+        "recall": 0.4375,
+        "precision": 0.6666666666666666,
+        "alert_rate": 0.18666666666666668
+      },
+      {
+        "threshold": 0.1,
+        "recall": 0.3515625,
+        "precision": 0.703125,
+        "alert_rate": 0.14222222222222222
+      },
+      {
+        "threshold": 0.15,
+        "recall": 0.1875,
+        "precision": 0.7741935483870968,
+        "alert_rate": 0.06888888888888889
+      }
+    ],
+    "mape_target_met": true,
+    "recall_target_met": false
+  },
+  "kmeans": {
+    "silhouette": 0.5251081162212164,
+    "segments": {
+      "Performa Rendah (Prioritas)": {
+        "n": 456,
+        "feed_efficiency": 0.227,
+        "dmi_kg": 6.07,
+        "prev_milk_yield_l": 1.39
+      },
+      "Performa Rata-rata": {
+        "n": 1156,
+        "feed_efficiency": 0.537,
+        "dmi_kg": 9.78,
+        "prev_milk_yield_l": 5.25
+      },
+      "Performa Tinggi": {
+        "n": 638,
+        "feed_efficiency": 0.658,
+        "dmi_kg": 12.67,
+        "prev_milk_yield_l": 8.35
+      }
+    },
+    "agreement_with_dataset": 1.0
+  },
+  "sklearn_version": "1.9.0"
+}
