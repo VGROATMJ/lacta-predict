@@ -1,0 +1,33 @@
+﻿workflows:
+  ios-capacitor-unsigned:
+    name: Build iOS Capacitor (Unsigned IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm install
+      - name: Sync Capacitor iOS
+        script: |
+          npx cap sync ios
+      - name: Build unsigned iOS app & package IPA
+        script: |
+          cd ios/App
+          xcodebuild -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CONFIGURATION_BUILD_DIR=$CM_BUILD_DIR/build/Release-iphoneos
+          mkdir -p $CM_BUILD_DIR/Payload
+          cp -r $CM_BUILD_DIR/build/Release-iphoneos/App.app $CM_BUILD_DIR/Payload/
+          cd $CM_BUILD_DIR
+          zip -r LactaPredict-unsigned.ipa Payload
+    artifacts:
+      - "*.ipa"
