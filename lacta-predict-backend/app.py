@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Lacta-Predict - API backend (Flask).
 
 Alur utama  POST /predict {"cattle_id": "<uuid>"}:
@@ -100,7 +100,7 @@ def models() -> dict:
             _models["reg"] = joblib.load(os.path.join(Config.MODELS_DIR, "regresi_susu.joblib"))
             _models["seg"] = joblib.load(os.path.join(Config.MODELS_DIR, "kmeans_segmen.joblib"))
         except FileNotFoundError as e:
-            raise ApiError(503, "Model belum ada. Jalankan `python train_model.py` terlebih dahulu.") from e
+            raise ApiError(503, f"Model tidak ditemukan di {Config.MODELS_DIR} (cwd={os.getcwd()}, BASE={BASE}): {e}") from e
     return _models
 
 
